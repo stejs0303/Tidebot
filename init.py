@@ -79,7 +79,14 @@ class Database:
                     user_id INTEGER PRIMARY KEY, 
                     ap INTEGER, 
                     aap INTEGER, 
-                    dp INTEGER
+                    accuracy INTEGER,
+                    dp INTEGER,
+                    dr INTEGER,
+                    evasion INTEGER,
+                    class TEXT,
+                    level REAL,
+                    gear_planner TEXT,
+                    gear_image INTEGER
                     ) """
             )
         if not any("levels" in table for table in res):
