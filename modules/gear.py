@@ -13,12 +13,16 @@ class Gear(commands.Cog):
     
     @commands.group(pass_context=True, invoke_without_command=True)
     async def gear(self, ctx: commands.Context, *args):
-        
         pass
     
     
-    @gear.command()
+    @gear.group(pass_context=True, invoke_without_command=True)
     async def update(self, ctx: commands.Context, *args):
+        pass
+
+    
+    @update.command()
+    async def garmoth(self, ctx: commands.Context, *args):
         pass
     
     
