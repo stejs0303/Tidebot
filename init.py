@@ -65,50 +65,44 @@ class Database:
         print("Initializing database connection!")
         
         try:
-            self.connection = sql.connect("data\\tidebot.db")
-            self.cursor     = self.connection.cursor()
+            self._connection = sql.connect("data\\tidebot.db")
+            self._cursor     = self._connection.cursor()
         except Exception as e:
             print(e); exit(1)
         
-        res = self.cursor.execute("SELECT name FROM sqlite_master")
+        res = self._cursor.execute("SELECT name FROM sqlite_master")
         
         if not any("gear" in table for table in res):
             print("Gear table doesn't exist! Initializing new table.")
-            self.cursor.execute(
-                """ CREATE TABLE gear(
-                    user_id INTEGER PRIMARY KEY, 
-                    ap INTEGER, 
-                    aap INTEGER, 
-                    accuracy INTEGER,
-                    dp INTEGER,
-                    dr INTEGER,
-                    evasion INTEGER,
-                    class TEXT,
-                    level REAL,
-                    gear_planner TEXT,
-                    gear_image INTEGER
-                    ) """
-            )
+            self._cursor.execute(""" CREATE TABLE gear( user_id INTEGER PRIMARY KEY, ap INTEGER, aap INTEGER, dp INTEGER,
+                                                       accuracy INTEGER, dr INTEGER, evasion INTEGER,
+                                                       class TEXT, level REAL, gear_planner TEXT, gear_image INTEGER ) """)
+        
         if not any("levels" in table for table in res):
             print("Levels table doesn't exist! Initializing new table.")
-            self.cursor.execute(
-                """ CREATE TABLE levels(
-                    user_id INTEGER PRIMARY KEY, 
-                    exp INTEGER, 
-                    level INTEGER,
-                    bg_color INTEGER,
-                    full_bar_color INTEGER,
-                    progress_bar_color INTEGER,
-                    text_color INTEGER,
-                    bg_image INTEGER
-                    ) """
-                )
+            self._cursor.execute(""" CREATE TABLE levels( user_id INTEGER PRIMARY KEY, exp INTEGER, level INTEGER, 
+                                                         bg_color INTEGER, full_bar_color INTEGER, progress_bar_color INTEGER,
+                                                         text_color INTEGER, bg_image INTEGER ) """)
+    
+    
+    @property
+    def connection(self):
+        return self._connection
+    
+    @property
+    def cursor(self):
+        return self._cursor
+    
+    
+    def execute(self, command: str):
+        self._cursor.execute(command)
+    
     
     def close(self):
         print("Closing database connection!")
         
-        self.cursor.close()
-        self.connection.close()     
+        self._cursor.close()
+        self._connection.close()     
 
         
 cfg = Config.from_json()
