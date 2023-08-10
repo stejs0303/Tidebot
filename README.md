@@ -3,10 +3,11 @@
 WIP. Used libraries can be found in `requirements.txt`.
 
 ## Plans:
-- [ ] Levels 
+- [ ] Ranking 
   - [x] ranking based on number of sent messages, 
   - [x] rank summary,
   - [x] customizable summary,
+  - [ ] add overall ranking into summary
   - [ ] comparing 2 or more users
 - [ ] Gear 
   - [ ] commands for setting gear and individual stats in discord, 
