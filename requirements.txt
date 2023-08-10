@@ -1,6 +1,5 @@
 discord.py
 requests
-urllib3
 pillow
 selenium==3
 beautifulsoup4
