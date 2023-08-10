@@ -111,7 +111,7 @@ async def on_error(event, *args, **kwargs):
     
 @tidebot.command()
 async def github(ctx: commands.Context, *args):
-    ctx.send("https://github.com/stejs0303/Tidebot")
+    await ctx.send("https://github.com/stejs0303/Tidebot")
     
 
 async def run() -> None: 
