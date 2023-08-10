@@ -1,0 +1,15 @@
+# IDE
+.vscode*
+
+# Python
+__pycache__*
+env*
+
+# User data
+data/config.json
+data/tidebot.db
+data/ranking*
+data/gear*
+
+testing*
+content.txt
