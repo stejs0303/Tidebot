@@ -3,7 +3,9 @@ import discord
 import asyncio
 import os
 
-from init import cfg, db
+from config import cfg
+from database import db
+
 from utils.messages import process_message
 
 
@@ -44,7 +46,7 @@ async def help(ctx: commands.Context):
                               colour=cfg.embed_color, 
                               description="- shows help commands from all loaded modules")
 
-        if bool(tidebot.get_cog("Levels")):
+        if bool(tidebot.get_cog("Ranking")):
             embed.add_field(name=f"{cfg.prefix}rank help", 
                             value=f"- shows help for rank commands", 
                             inline=False)
@@ -52,7 +54,12 @@ async def help(ctx: commands.Context):
             embed.add_field(name=f"{cfg.prefix}gear help", 
                             value=f"- shows help for gear commands", 
                             inline=False)
-
+            
+        embed.add_field(name=f"{cfg.prefix}github",
+                        value=f"- link to github",
+                        inline=False)
+        
+        
         await ctx.send(embed=embed)
 
 
@@ -101,6 +108,11 @@ async def on_error(event, *args, **kwargs):
     message: discord.Message = args[0]
     await message.reply("You've caused an error!<:reee:778565765355405392>")
 
+    
+@tidebot.command()
+async def github(ctx: commands.Context, *args):
+    ctx.send("https://github.com/stejs0303/Tidebot")
+    
 
 async def run() -> None: 
     async with tidebot:
