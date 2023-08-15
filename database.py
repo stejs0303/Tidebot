@@ -5,6 +5,7 @@ class Database:
     """ TODO: Fix slots? """
     __slots__ = ("_connection", "_cursor")
     
+    
     def __init__(self) -> None:
         print("Initializing database connection!")
         
@@ -14,18 +15,10 @@ class Database:
         except Exception as e:
             print(e); exit(1)
     
-        self.validate_existance_of_databases()
-    
-    @property
-    def connection(self):
-        return self._connection
-    
-    @property
-    def cursor(self):
-        return self._cursor
+        self.validate_databases()
     
     
-    def validate_existance_of_databases(self) -> None:
+    def validate_databases(self) -> None:
         res = self._cursor.execute("SELECT name FROM sqlite_master")
         
         if not any("gear" in table for table in res):
@@ -43,13 +36,6 @@ class Database:
                                                           text_color INTEGER, bg_image INTEGER ) """)
     
     
-    def close(self) -> None:
-        print("Closing database connection!")
-        
-        self._cursor.close()
-        self._connection.close()     
-        
-    
     def select(self, values: str, table: str, condition: str = "") -> None:
         self._cursor.execute(
             f"SELECT {values} FROM {table}{' WHERE ' if bool(condition) else ''}{condition}")
@@ -59,9 +45,14 @@ class Database:
         self._cursor.execute(
             f"UPDATE {table} SET {values}{' WHERE ' if bool(condition) else ''}{condition}")
 
+
     def insert(self, values: str, table: str, condition: str = "") -> None:
         self._cursor.execute(
             f"INSERT INTO {table} VALUES {values}{' WHERE ' if bool(condition) else ''}{condition}")
+    
+    
+    def delete(self, table: str, condition: str) -> None:
+        self._cursor.execute(f"DELETE FROM {table} WHERE {condition}")
         
         
     def contains(self, table: str, condition: str) -> bool:
@@ -80,6 +71,23 @@ class Database:
         
     def commit(self) -> None:
         self._connection.commit()
+
+
+    def close(self) -> None:
+        print("Closing database connection!")
+
+        self._cursor.close()
+        self._connection.close()     
+
+
+    @property
+    def connection(self):
+        return self._connection
+    
+    
+    @property
+    def cursor(self):
+        return self._cursor
 
 
 
