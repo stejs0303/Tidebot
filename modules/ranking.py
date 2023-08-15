@@ -3,13 +3,14 @@ from discord.ext import commands
 
 import os
 import io
-import re
 import requests
 import math
  
 from PIL import Image, ImageDraw
 from PIL.Image import Resampling
 from utils.image_processing import round_rectangle
+
+from utils.useful import get_user
 
 from config import cfg
 from database import db
@@ -74,13 +75,13 @@ class Ranking(commands.Cog):
         db.update(values=f"exp={exp}, level={level}", 
                   table="ranking", 
                   condition=f"user_id={message.author.id}")
-        db.commit()    
+        db.commit()
 
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def rank(self, ctx: commands.Context, *args):
         async with ctx.channel.typing():
-            user_id = ctx.author.id if not bool(args) else re.search("\d+", args[0]).group()
+            user_id = get_user(ctx, args)
             try:
                 user: discord.User = await self.bot.fetch_user(user_id)
                 
@@ -92,9 +93,10 @@ class Ranking(commands.Cog):
                           table="ranking",
                           condition=f"user_id={user_id}")
                 res = db.fetchone()
-
+                _, exp, level, bg_color, full_bar_color, progress_bar_color, text_color, bg_image = res
+                
                 img: Image.Image = await self.generate_image(
-                    user, res[1], res[2], res[3], res[4], res[5], res[6], res[7])
+                    user, exp, level, bg_color, full_bar_color, progress_bar_color, text_color, bg_image)
                 
                 with io.BytesIO() as img_bytes:
                     img.save(img_bytes, format="PNG")
@@ -123,8 +125,8 @@ class Ranking(commands.Cog):
     @rank.command()
     async def reset(self, ctx: commands.Context, *args):
         async with ctx.channel.typing():
+            user_id = get_user(ctx, args)
             try:
-                user_id = ctx.author.id if not bool(args) else re.search("\d+", args[0]).group()
                 if not db.contains(table="ranking", condition=f"user_id={user_id}"):
                     user: discord.User = await self.bot.fetch_user(user_id)
                     await ctx.send(f"Couldn't find '{user.name}' in my database.")
