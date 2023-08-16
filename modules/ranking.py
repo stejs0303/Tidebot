@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw
 from PIL.Image import Resampling
 from utils.image_processing import round_rectangle
 
-from utils.useful import get_user
+from utils.discord_utils import get_user
 
 from config import cfg
 from database import db
