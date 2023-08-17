@@ -24,10 +24,10 @@ class Database:
         if not any("gear" in table for table in res):
             print("Gear table doesn't exist! Initializing new table.")
             self._cursor.execute(""" CREATE TABLE gear(user_id INTEGER PRIMARY KEY, 
-                                                       ap INTEGER, aap INTEGER, dp INTEGER, health INTEGER, 
-                                                       all_ap INTEGER, all_aap INTEGER, accuracy INTEGER, 
-                                                       dr TEXT, dr_rate INTEGER, evasion TEXT, se_rate INTEGER,
-                                                       class TEXT, level REAL, gear_planner TEXT, gear_image INTEGER ) """)
+                                                       ap INTEGER, aap INTEGER, dp INTEGER, hp INTEGER, 
+                                                       all_ap INTEGER, all_aap INTEGER, acc INTEGER, 
+                                                       dr TEXT, dr_rate INTEGER, eva TEXT, se_rate INTEGER,
+                                                       class TEXT, level REAL, plan TEXT, gear INTEGER ) """)
         
         if not any("ranking" in table for table in res):
             print("Ranking table doesn't exist! Initializing new table.")
