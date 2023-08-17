@@ -3,18 +3,17 @@ from discord.ext import commands
 
 import os
 import io
-import requests
 import math
  
-from PIL import Image, ImageDraw
+from PIL import Image 
+from PIL import ImageDraw
 from PIL.Image import Resampling
-from utils.image_processing import round_rectangle
 
-from utils.discord_utils import get_user
+import utils.discord_utils as utils
+import utils.image_processing as improc
 
 from config import cfg
 from database import db
-
 
 
 class Ranking(commands.Cog):
@@ -81,7 +80,7 @@ class Ranking(commands.Cog):
     @commands.group(pass_context=True, invoke_without_command=True)
     async def rank(self, ctx: commands.Context, *args):
         async with ctx.channel.typing():
-            user_id = get_user(ctx, args)
+            user_id = utils.get_user(ctx, args)
             try:
                 user: discord.User = await self.bot.fetch_user(user_id)
                 
@@ -125,7 +124,7 @@ class Ranking(commands.Cog):
     @rank.command()
     async def reset(self, ctx: commands.Context, *args):
         async with ctx.channel.typing():
-            user_id = get_user(ctx, args)
+            user_id = utils.get_user(ctx, args)
             try:
                 if not db.contains(table="ranking", condition=f"user_id={user_id}"):
                     user: discord.User = await self.bot.fetch_user(user_id)
@@ -176,13 +175,12 @@ class Ranking(commands.Cog):
                             self.delete_custom_bg(img_path)
                             
                         elif bool(value):
-                            img = Image.open(requests.get(value, stream=True).raw)
-                            self.resize_and_save_bg(img, img_path)
+                            img = utils.get_image_from_url(value)
+                            improc.resize_and_save(img, img_path)
                                 
                         elif bool(ctx.message.attachments):
-                            file = ctx.message.attachments[0]
-                            img = Image.open(io.BytesIO(await file.read()))
-                            self.resize_and_save_bg(img, img_path)
+                            img = utils.get_image_from_attachment(ctx.message.attachments[0])
+                            improc.resize_and_save(img, img_path)
                         
                         else:
                             raise Exception("Wrong value passed for bg_image.")
@@ -202,11 +200,6 @@ class Ranking(commands.Cog):
             return False
         
         return True
-
-    
-    def resize_and_save_bg(self, img: Image.Image, img_path: str):
-        img = img.resize((cfg.ranking.img_width, cfg.ranking.img_height), Resampling.BICUBIC)
-        img.save(img_path)
     
 
     def delete_custom_bg(self, img_path: str):
@@ -239,22 +232,23 @@ class Ranking(commands.Cog):
                              bg_color: int, full_bar_color: int, progress_bar_color: int, 
                              text_color: int, bg_image: int) -> Image.Image:
         image = None
-        if bool(bg_image):
-            image = Image.open(f"{cfg.ranking.path}\\bg_{user.id}.png")
+        if bool(bg_image): image = Image.open(f"{cfg.ranking.path}\\bg_{user.id}.png")
         size = (cfg.ranking.img_width, cfg.ranking.img_height)
-        image_background = round_rectangle(size, cfg.ranking.bg_round_rad, bg_color)
+        image_background = improc.round_rectangle(size, cfg.ranking.bg_round_rad, bg_color)
         
         with io.BytesIO() as icon_bytes:
             await user.display_avatar.save(icon_bytes)
             icon = Image.open(icon_bytes).copy()
         size = (cfg.ranking.icon_height, cfg.ranking.icon_width)
         icon = icon.resize(size, Resampling.BICUBIC)
-        icon_background = round_rectangle(size, cfg.ranking.icon_round_rad, 0xFF000000)
+        icon_background = improc.round_rectangle(size, cfg.ranking.icon_round_rad, 0xFF000000)
         
-        size = (math.ceil(cfg.ranking.img_width - 2 * cfg.ranking.w_offset), cfg.ranking.h_offset)
-        full_bar = round_rectangle(size, cfg.ranking.bar_round_rad, full_bar_color)
-        size = (math.ceil((cfg.ranking.img_width - 2 * cfg.ranking.w_offset) / self._max_exp_at(level) * exp), cfg.ranking.h_offset)
-        progress_bar = round_rectangle(size, cfg.ranking.bar_round_rad, progress_bar_color)
+        size = (math.ceil(cfg.ranking.img_width - 2 * cfg.ranking.w_offset), 
+                cfg.ranking.h_offset)
+        full_bar = improc.round_rectangle(size, cfg.ranking.bar_round_rad, full_bar_color)
+        size = (math.ceil((cfg.ranking.img_width - 2 * cfg.ranking.w_offset) / self._max_exp_at(level) * exp), 
+                cfg.ranking.h_offset)
+        progress_bar = improc.round_rectangle(size, cfg.ranking.bar_round_rad, progress_bar_color)
         
         out = image_background
         write = ImageDraw.Draw(out)
@@ -266,13 +260,16 @@ class Ranking(commands.Cog):
         out.paste(full_bar, position, full_bar)
         out.paste(progress_bar, position, progress_bar)
         
-        position = (cfg.ranking.w_offset + cfg.ranking.h_offset + cfg.ranking.icon_width, cfg.ranking.h_offset - 17)
+        position = (cfg.ranking.w_offset + cfg.ranking.h_offset + cfg.ranking.icon_width, 
+                    cfg.ranking.h_offset - 17)
         write.text(position, user.display_name, font=cfg.ranking.font_name, fill=text_color)
         
-        position = (cfg.ranking.w_offset + cfg.ranking.h_offset + cfg.ranking.icon_width, cfg.ranking.h_offset + 80 - 17)
+        position = (cfg.ranking.w_offset + cfg.ranking.h_offset + cfg.ranking.icon_width, 
+                    cfg.ranking.h_offset + 80 - 17)
         write.text(position, f"Lvl: {level}", font=cfg.ranking.font_text, fill=text_color)
         
-        position = (cfg.ranking.w_offset + cfg.ranking.h_offset + cfg.ranking.icon_width, cfg.ranking.h_offset + 130 - 17)
+        position = (cfg.ranking.w_offset + cfg.ranking.h_offset + cfg.ranking.icon_width, 
+                    cfg.ranking.h_offset + 130 - 17)
         write.text(position, f"Exp: {exp}/{self._max_exp_at(level)}", font=cfg.ranking.font_text, fill=text_color)
         
         return out
