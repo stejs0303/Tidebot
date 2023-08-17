@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-import os
 import io
 import math
  
@@ -113,7 +112,7 @@ class Ranking(commands.Cog):
 
 
     @rank.command()
-    async def set(self, ctx: commands.Context, *, params):
+    async def set(self, ctx: commands.Context, *, params: str = None):
         async with ctx.channel.typing():
             if await self.process_settings(ctx, params):
                 await ctx.send("Rank settings have been updated.")
@@ -140,7 +139,7 @@ class Ranking(commands.Cog):
                           condition=f"user_id={user_id}")
                 db.commit()
                 
-                self.delete_custom_bg(f"{cfg.ranking.path}\\bg_{user_id}.png")
+                utils.delete_image(f"{cfg.ranking.path}\\{user_id}.png")
                 await ctx.send("Settings have been resetted.")
                 
             except Exception as e:
@@ -148,11 +147,12 @@ class Ranking(commands.Cog):
     
 
     async def process_settings(self, ctx: commands.Context, params: str) -> bool:
+        if params is None: return False
         try:
             parsed = {}
             for param in params.split(';'):
                 name, value = param.split('=')
-                name, value = name.strip(), value.strip()
+                name, value = name.strip().lower(), value.strip()
                 match name:
                     case "bg_color" | "full_bar_color" | "progress_bar_color" | "text_color":
                         if value[0] == '#':
@@ -167,25 +167,25 @@ class Ranking(commands.Cog):
                         parsed[name] = color
        
                     case "bg_image":
-                        image_background = 1
-                        img_path = f"{cfg.ranking.path}\\bg_{ctx.author.id}.png"
+                        has_custom_bg = 1
+                        img_path = f"{cfg.ranking.path}\\{ctx.author.id}.png"
                         
                         if value in ("None", "none"):
-                            image_background = 0
-                            self.delete_custom_bg(img_path)
+                            has_custom_bg = 0
+                            utils.delete_image(img_path)
                             
                         elif bool(value):
                             img = utils.get_image_from_url(value)
-                            improc.resize_and_save(img, img_path)
+                            improc.resize_and_save(img, img_path, (cfg.ranking.img_width, cfg.ranking.img_height))
                                 
                         elif bool(ctx.message.attachments):
                             img = utils.get_image_from_attachment(ctx.message.attachments[0])
-                            improc.resize_and_save(img, img_path)
+                            improc.resize_and_save(img, img_path, (cfg.ranking.img_width, cfg.ranking.img_height))
                         
                         else:
                             raise Exception("Wrong value passed for bg_image.")
                         
-                        parsed[name] = image_background
+                        parsed[name] = has_custom_bg
 
                     case _:
                         return False
@@ -200,12 +200,7 @@ class Ranking(commands.Cog):
             return False
         
         return True
-    
 
-    def delete_custom_bg(self, img_path: str):
-        if(os.path.exists(img_path)):
-            os.remove(img_path)
-    
 
     def should_lvl_up(self, exp: int, level: int) -> bool:
         return exp >= self._max_exp_at(level)
@@ -232,7 +227,7 @@ class Ranking(commands.Cog):
                              bg_color: int, full_bar_color: int, progress_bar_color: int, 
                              text_color: int, bg_image: int) -> Image.Image:
         image = None
-        if bool(bg_image): image = Image.open(f"{cfg.ranking.path}\\bg_{user.id}.png")
+        if bool(bg_image): image = Image.open(f"{cfg.ranking.path}\\{user.id}.png")
         size = (cfg.ranking.img_width, cfg.ranking.img_height)
         image_background = improc.round_rectangle(size, cfg.ranking.bg_round_rad, bg_color)
         
