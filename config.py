@@ -37,7 +37,8 @@ class _Gear:
         self.img_y                      = gear["IMG_Y"]
         self.img_width                  = gear["IMG_WIDTH"]
         self.img_height                 = gear["IMG_HEIGHT"]
-        self.extra_stats                = gear["EXTRA_STATS"]
+        self.inlcude                    = gear["INCLUDE_STATS"]
+        self.exlude                     = gear["EXCLUDE_STATS"]
         self.path                       = gear["IMG_FOLDER"]
 
 
