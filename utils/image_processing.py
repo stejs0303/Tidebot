@@ -24,6 +24,7 @@ def round_rectangle(size, radius, fill):
     rectangle.paste(corner.rotate(270), (width - radius, 0))
     return rectangle
 
-def resize_and_save(img: _Image.Image, img_path: str):
-    img = img.thumbnail((_cfg.ranking.img_width, _cfg.ranking.img_height), _Resampling.BICUBIC)
+
+def resize_and_save(img: _Image.Image, img_path: str, size: tuple):
+    img = img.thumbnail(size, _Resampling.BICUBIC)
     img.save(img_path)

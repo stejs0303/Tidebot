@@ -7,6 +7,7 @@ import requests as _requests
 
 import re as _re
 import io as _io
+import os as _os
 
 def get_user(ctx: _commands.Context, args) -> str:
     return str(ctx.author.id) if not bool(args) else _re.search("\d+", args[0]).group()
@@ -18,4 +19,8 @@ async def get_image_from_attachment(file: _discord.Attachment) -> None:
     
 def get_image_from_url(file: str) -> None:
     return _Image.open(_requests.get(file, stream=True).raw)
+    
+
+def delete_image(img_path: str) -> None:
+    if(_os.path.exists(img_path)): _os.remove(img_path)
     
