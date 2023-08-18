@@ -114,10 +114,11 @@ class Ranking(commands.Cog):
     @rank.command()
     async def set(self, ctx: commands.Context, *, params: str = None):
         async with ctx.channel.typing():
-            if await self.process_settings(ctx, params):
+            state, message = await self.process_settings(ctx, params)
+            if state:
                 await ctx.send("Rank settings have been updated.")
             else:
-                await ctx.send("Something went wrong!")
+                await ctx.send(f"Error: {message}")
 
 
     @rank.command()
@@ -147,7 +148,8 @@ class Ranking(commands.Cog):
     
 
     async def process_settings(self, ctx: commands.Context, params: str) -> bool:
-        if params is None: return False
+        if params is None: 
+            return False, "No parameters have been provided."
         try:
             parsed = {}
             for param in params.split(';'):
@@ -157,13 +159,17 @@ class Ranking(commands.Cog):
                     case "bg_color" | "full_bar_color" | "progress_bar_color" | "text_color":
                         if value[0] == '#':
                             color = int(f"0xFF{value[5:7]}{value[3:5]}{value[1:3]}", 16)
-                            
+
                         elif value[:2] == "0x":
                             color = int(f"0xFF{value[6:8]}{value[4:6]}{value[2:4]}", 16)
-                        else:
-                            r, g, b = [int(channel) for channel in value.split(',')]
+
+                        elif len(channels := value.split(',')) == 3:
+                            r, g, b = channels
                             color = int(f"0xFF{hex(b)[2:]:0>2}{hex(g)[2:]:0>2}{hex(r)[2:]:0>2}", 16)
-                            
+
+                        else:
+                            return False, f"Unable to parse the value {value} assigned to {name}"    
+       
                         parsed[name] = color
        
                     case "bg_image":
@@ -183,12 +189,12 @@ class Ranking(commands.Cog):
                             improc.resize_and_save(img, img_path, (cfg.ranking.img_width, cfg.ranking.img_height))
                         
                         else:
-                            raise Exception("Wrong value passed for bg_image.")
+                            return False, f"Unable to process the value {value} assigned to {name}."
                         
                         parsed[name] = has_custom_bg
 
                     case _:
-                        return False
+                        return False, f"Parameter {name} doesn\'t exist."
                     
             db.update(values=f"{', '.join([f'{key}={val}' for key, val in parsed.items()])}",
                       table="ranking",
@@ -197,9 +203,10 @@ class Ranking(commands.Cog):
         
         except Exception as e:
             print(e.with_traceback())
-            return False
+            return False, f"An exception has been raised while parsing provided parameters. \
+                Please make sure that you\'ve used the correct syntax."
         
-        return True
+        return True, "ok"
 
 
     def should_lvl_up(self, exp: int, level: int) -> bool:
