@@ -2,31 +2,22 @@ import discord
 from discord.ext import commands
 
 import re
+import io
+
+from PIL import Image
+
+from selenium import webdriver
+from bs4 import BeautifulSoup
+from time import sleep
 
 import utils.image_processing as improc
 import utils.discord_utils as utils
 
+from typing import Any
+
 from config import cfg
 from database import db
 
-""" SAVED IN DATABASE:
-        user_id INTEGER PRIMARY KEY, 
-        ap INTEGER, 
-        aap INTEGER,
-        dp INTEGER,
-        health INTEGER, 
-        all_ap INTEGER,
-        all_aap INTEGER,
-        accuracy INTEGER, 
-        dr TEXT,
-        dr_rate INTEGER, 
-        evasion TEXT,
-        se_rate INTEGER,
-        class TEXT, 
-        level REAL,
-        gear_planner TEXT,
-        gear_image INTEGER 
-"""
 
 class Gear(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -55,11 +46,12 @@ class Gear(commands.Cog):
     @gear.group(pass_context=True, invoke_without_command=True)
     async def set(self, ctx: commands.Context, *, params: str = None):
         async with ctx.channel.typing():
-            if await self.process_stats(ctx, params):
+            state, message = await self.process_stats(ctx, params)
+            if state:
                 await ctx.send("Gear has been updated.")
                 await self.post_gear(ctx, ctx.author.id)
             else:
-                await ctx.send("Something went wrong!")
+                await ctx.send(f"Error: {message}")
 
     
     @set.command()
@@ -67,13 +59,22 @@ class Gear(commands.Cog):
         # Take link as a arg, if not supplied, check database 
         async with ctx.channel.typing():
             if link is not None:
-                pass
-            elif(db.contains(ctx.author.id)):
-                pass
+                if cfg.gear.url_regex.match(link) is None:
+                    ctx.send(f"Provided url {link} doesn\'t match garmoth.com gear build.")
+                    return 
+            
+            elif db.contains(table="gear", condition=f"user_id={ctx.author.id}"):
+                db.select(values=f"plan",
+                          table="gear",
+                          condition=f"user_id={ctx.author.id}")
+                link = db.fetchone()[0].strip("\"")
+                
             else:
                 ctx.send("You have to provide garmoth.com link or have it already set in your gear set.")
                 return
         
+            content = self.get_webpage_content(link, ctx.author.id)
+            stats = self.parse_webpage_content(content)
     
     @gear.command()
     async def remove(self, ctx: commands.Context, *args):
@@ -132,7 +133,8 @@ class Gear(commands.Cog):
     
     
     async def process_stats(self, ctx: commands.Context, params: str) -> bool:
-        if params == None: return False
+        if params is None: 
+            return False, "No parameters have been provided."
         try:
             parsed = {}
             for param in params.split(';'):
@@ -146,8 +148,8 @@ class Gear(commands.Cog):
                         parsed[name] = re.match(r"\d+(\.|,)?\d+", value).group()
                         
                     case "plan":
-                        if re.match(r"(https:\/\/|http:\/\/|www.)garmoth.com\/character\/[0-9a-zA-Z]+") is None:
-                            return False
+                        if cfg.gear.url_regex.match(value) is None:
+                            return False, f"Provided url {value} doesn\'t match garmoth.com gear build."
                         
                         parsed[name] = f"\"{value}\""
                     
@@ -168,12 +170,12 @@ class Gear(commands.Cog):
                             improc.resize_and_save(img, img_path, (cfg.gear.img_width, cfg.gear.img_height))
                         
                         else:
-                            raise Exception("Wrong value passed for gear.")
+                            return False, f"Unable to process the value {value} assigned to {name}."
                         
                         parsed[name] = has_gear_img
                     
                     case _:
-                        return False
+                        return False, f"Parameter {name} doesn\'t exist."
                     
             db.update(values=f"{', '.join([f'{key}={val}' for key, val in parsed.items()])}",
                       table="gear",
@@ -182,15 +184,80 @@ class Gear(commands.Cog):
         
         except Exception as e:
             print(e.with_traceback())
-            return False
+            return False, f"An exception has been raised while parsing provided parameters. \
+                Please make sure that you\'ve used the correct syntax."
         
-        return True
+        return True, "ok"
     
     
     def gearscore(self, ap: int, aap: int, dp: int) -> int|float:
         return (ap + aap) / 2 + dp
     
     
-    
+    def get_webpage_content(self, link: str, user_id: int) -> Any:
+        driver = webdriver.Edge(executable_path=cfg.gear.webdriver_path)
+        driver.set_window_size(cfg.gear.browser_window_width, 
+                               cfg.gear.browser_window_height)
+        driver.get(link)
+        
+        """TODO: Find better solution pls.."""
+        sleep(2)
+        
+        for button in driver.find_elements_by_class_name("ncmp__btn"):
+            if button.text == "Accept":
+                button.click()
+        
+        """TODO: Find better solution pls.."""
+        sleep(1)
+        
+        img = Image.open(io.BytesIO(driver.get_screenshot_as_png()))
+        improc.resize_and_save(img, f"{cfg.gear.path}\\{user_id}.png", 
+                               (cfg.gear.img_height, cfg.gear.img_width))
+
+        content = driver.find_element_by_id("main").get_attribute("innerHTML")
+        driver.quit()
+        
+        return content
+        
+    def parse_webpage_content(content) -> dict[str, str]:
+        stats = {}
+        soup = BeautifulSoup(content, features="html.parser")
+        
+        """ap INTEGER, aap INTEGER, dp INTEGER, hp INTEGER, 
+           all_ap INTEGER, all_aap INTEGER, acc INTEGER, 
+           dr TEXT, dr_rate INTEGER, eva TEXT, se_rate INTEGER,
+           class TEXT, level REAL, plan TEXT, gear INTEGER"""
+        
+        div = soup.find(name="div", attrs="grid grid-cols-4 items-end text-center")
+        p_names = div.find_all(name="p", attrs="font-bold")
+        p_values = div.find_all(name="p", attrs="text-2xl font-bold")
+
+        # ap, aap, dp, score - cfg.gear.exclude
+        stats |= {name.get_text().strip(): value.get_text().strip() 
+                  for name, value in zip(p_names, p_values)
+                  if name.get_text().strip().lower() not in cfg.gear.exclude}
+
+        table = soup.find(name="table", attrs="bg-600 relative")
+        td_names = table.find_all(name="td", attrs="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap pl-2 text-left")
+        td_values = table.find_all(name="span", attrs={"style": "min-width: 100px;"})
+
+        # total ap, total aap, accuracy, (melee, range, magic) dr, (melee, range, magic) evasion - cfg.gear.exclude
+        stats |= {name.get_text().strip(): value.get_text().strip() 
+                  for name, value in zip(td_names, td_values)
+                  if name.get_text().strip().lower() not in cfg.gear.exclude}
+
+        for table in soup.find_all(name="table", attrs="bg-600 relative overflow-hidden rounded"):
+            td_names = table.find_all(name="td", attrs="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap pl-2 text-left")
+            td_values = table.find_all(name="span", attrs={"style": "min-width: 100px;"})
+            
+            # all in cfg.gear.include
+            stats |= {name.get_text().strip(): value.get_text().strip() 
+                      for name, value in zip(td_names, td_values)
+                      if name.get_text().strip().lower() in cfg.gear.include}
+
+        return stats
+
+
+
 async def setup(client):
     await client.add_cog(Gear(client))
