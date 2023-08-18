@@ -1,5 +1,6 @@
 import json
 from PIL import ImageFont
+import re
 
 class _Ranking:
     # TODO: Add __slots__()
@@ -32,13 +33,15 @@ class _Gear:
     def __init__(self, gear: dict) -> None:
         self.browser_window_width       = gear["BROWSER_WINDOW_WIDTH"]
         self.browser_window_height      = gear["BROWSER_WINDOW_HEIGHT"]
-        self.browser_exec_path          = gear["BROWSER_EXEC_PATH"]
+        self.webdriver_path             = gear["WEBDRIVER_PATH"]
         self.img_x                      = gear["IMG_X"]
         self.img_y                      = gear["IMG_Y"]
         self.img_width                  = gear["IMG_WIDTH"]
         self.img_height                 = gear["IMG_HEIGHT"]
-        self.inlcude                    = gear["INCLUDE_STATS"]
-        self.exlude                     = gear["EXCLUDE_STATS"]
+        self.url_regex                  = re.compile(r"^(https:\/\/|http:\/\/|www.)garmoth.com\/character\/[0-9a-zA-Z]{10}$", 
+                                                     flags=re.RegexFlag.MULTILINE)
+        self.include                    = gear["INCLUDE_STATS"]
+        self.exclude                    = gear["EXCLUDE_STATS"]
         self.path                       = gear["IMG_FOLDER"]
 
 
