@@ -1,6 +1,5 @@
 import json
 from PIL import ImageFont
-import re
 
 class _Ranking:
     # TODO: Add __slots__()
@@ -38,14 +37,12 @@ class _Gear:
         self.img_y                      = gear["IMG_Y"]
         self.img_width                  = gear["IMG_WIDTH"]
         self.img_height                 = gear["IMG_HEIGHT"]
-        self.url_regex                  = re.compile(r"^(https:\/\/|http:\/\/|www.)garmoth.com\/character\/[0-9a-zA-Z]{10}$", 
-                                                     flags=re.RegexFlag.MULTILINE)
         self.include                    = gear["INCLUDE_STATS"]
         self.exclude                    = gear["EXCLUDE_STATS"]
         self.path                       = gear["IMG_FOLDER"]
 
 
-class Config:
+class _Config:
     # TODO: Add __slots__()
     
     def __init__(self, config: dict) -> None:
@@ -80,4 +77,4 @@ class Config:
 
 
 
-cfg = Config.from_json()
+cfg = _Config.from_json()
