@@ -26,7 +26,7 @@ class Database:
             self._cursor.execute(""" CREATE TABLE gear(user_id INTEGER PRIMARY KEY, 
                                                        ap INTEGER, aap INTEGER, dp INTEGER, hp INTEGER, 
                                                        all_ap INTEGER, all_aap INTEGER, acc INTEGER, 
-                                                       dr TEXT, dr_rate INTEGER, eva TEXT, se_rate INTEGER,
+                                                       dr TEXT, dr_rate REAL, eva TEXT, se_rate REAL,
                                                        class TEXT, level REAL, plan TEXT, gear INTEGER ) """)
         
         if not any("ranking" in table for table in res):
@@ -69,8 +69,16 @@ class Database:
         return self._cursor.fetchall()
         
         
+    def begin(self) -> None:
+        self._cursor.execute("BEGIN")    
+        
+        
     def commit(self) -> None:
         self._connection.commit()
+
+
+    def rollback(self) -> None:
+        self._connection.rollback()
 
 
     def close(self) -> None:
