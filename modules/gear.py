@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-import re
 import io
 
 from PIL import Image
@@ -26,7 +25,7 @@ class Gear(commands.Cog):
         self.gear_help = discord.Embed(title="Gear help",
                                        colour=cfg.embed_color)
     
-        # "ap"|"aap"|"dp"|"acc"|"dr"|"eva"|"hp"|"all ap"|"all aap"|"class"|"level"
+        # "ap"|"aap"|"dp"|"acc"|"dr"|"eva"|"hp"|"all_ap"|"all_aap"|"class"|"level"
         # "dr_rate"|"se_rate"
         # "plan"
         # "gear"
@@ -56,13 +55,12 @@ class Gear(commands.Cog):
     
     @set.command()
     async def garmoth(self, ctx: commands.Context, link = None):
-        # Take link as a arg, if not supplied, check database 
         async with ctx.channel.typing():
             if link is not None:
                 if cfg.gear.url_regex.match(link) is None:
                     ctx.send(f"Provided url {link} doesn\'t match garmoth.com gear build.")
-                    return 
-            
+                    return
+                 
             elif db.contains(table="gear", condition=f"user_id={ctx.author.id}"):
                 db.select(values=f"plan",
                           table="gear",
@@ -75,6 +73,8 @@ class Gear(commands.Cog):
         
             content = self.get_webpage_content(link, ctx.author.id)
             stats = self.parse_webpage_content(content)
+            # finish updating values
+            
     
     @gear.command()
     async def remove(self, ctx: commands.Context, *args):
@@ -96,14 +96,14 @@ class Gear(commands.Cog):
     
     async def post_gear(self, ctx: commands.Context, user_id: str):
         try:
-            """ db.select(values="*", 
+            db.select(values="*", 
                       table="gear", 
                       condition=f"user_id={user_id}")
             res = db.fetchone()
             
-            _, ap, aap, dp, health, all_ap, all_aap, accuracy, dr, dr_rate, evasion, se_rate, player_class, level, planner, _ = res """
-            ap, aap, dp, health, all_ap, all_aap, accuracy, dr, dr_rate, evasion, se_rate, player_class, level, planner = \
-            100, 100, 300, 5000, 600, 600, 800, 300, 30, 600, 20, "Striker", 63.3, ""
+            _, ap, aap, dp, health, all_ap, all_aap, accuracy, dr, dr_rate, evasion, se_rate, player_class, level, planner, _ = res
+            """ ap, aap, dp, health, all_ap, all_aap, accuracy, dr, dr_rate, evasion, se_rate, player_class, level, planner = \
+            100, 100, 300, 5000, 600, 600, 800, 300, 30, 600, 20, "Striker", 63.3, "" """
             
             embed = discord.Embed(title="Gear Set",
                       description=f"""{ctx.author.mention}
@@ -136,22 +136,37 @@ class Gear(commands.Cog):
         if params is None: 
             return False, "No parameters have been provided."
         try:
-            parsed = {}
+            db.begin()
             for param in params.split(';'):
                 name, value = param.split('=')
                 name, value = name.strip().lower(), value.strip()
                 match name:
                     case "ap"|"aap"|"dp"|"acc"|"dr"|"eva"|"hp"|"all_ap"|"all_aap"|"class"|"level":
-                        parsed[name] = int(value)
+                        if cfg.gear.num_regex.match(value) is None:
+                            db.rollback()
+                            return False, f"Provided value {value} is not a number."
+                        
+                        db.update(values=f"{name}={value}",
+                                  table="gear",
+                                  condition=f"user_id={ctx.author.id}")
                         
                     case "dr_rate"|"se_rate":
-                        parsed[name] = re.match(r"\d+(\.|,)?\d+", value).group()
+                        if cfg.gear.percentage_regex.match(value) is None:
+                            db.rollback()
+                            return False, f"Provided value {value} is not in valid format."
+                        
+                        db.update(values=f"{name}={value.strip('%').replace(',', '.')}",
+                                  table="gear",
+                                  condition=f"user_id={ctx.author.id}")
                         
                     case "plan":
                         if cfg.gear.url_regex.match(value) is None:
+                            db.rollback()
                             return False, f"Provided url {value} doesn\'t match garmoth.com gear build."
                         
-                        parsed[name] = f"\"{value}\""
+                        db.update(values=f"{name}=\"{value}\"",
+                                  table="gear",
+                                  condition=f"user_id={ctx.author.id}")
                     
                     case "gear":
                         has_gear_img = 1
@@ -170,23 +185,22 @@ class Gear(commands.Cog):
                             improc.resize_and_save(img, img_path, (cfg.gear.img_width, cfg.gear.img_height))
                         
                         else:
+                            db.rollback()
                             return False, f"Unable to process the value {value} assigned to {name}."
                         
-                        parsed[name] = has_gear_img
+                        db.update(values=f"{name}={has_gear_img}",
+                                  table="gear",
+                                  condition=f"user_id={ctx.author.id}")
                     
                     case _:
+                        db.rollback()
                         return False, f"Parameter {name} doesn\'t exist."
-                    
-            db.update(values=f"{', '.join([f'{key}={val}' for key, val in parsed.items()])}",
-                      table="gear",
-                      condition=f"user_id={ctx.author.id}")
-            db.commit()
-        
-        except Exception as e:
-            print(e.with_traceback())
+        except:
+            db.rollback()
             return False, f"An exception has been raised while parsing provided parameters. \
                 Please make sure that you\'ve used the correct syntax."
         
+        db.commit()
         return True, "ok"
     
     
@@ -227,6 +241,8 @@ class Gear(commands.Cog):
            all_ap INTEGER, all_aap INTEGER, acc INTEGER, 
            dr TEXT, dr_rate INTEGER, eva TEXT, se_rate INTEGER,
            class TEXT, level REAL, plan TEXT, gear INTEGER"""
+        
+        #TODO: Fix names of parameters
         
         div = soup.find(name="div", attrs="grid grid-cols-4 items-end text-center")
         p_names = div.find_all(name="p", attrs="font-bold")
