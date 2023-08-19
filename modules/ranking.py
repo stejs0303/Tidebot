@@ -13,7 +13,7 @@ import utils.image_processing as improc
 
 from config import cfg
 from database import db
-
+from compiled_regex import regex
 
 class Ranking(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -151,16 +151,16 @@ class Ranking(commands.Cog):
         if params is None: 
             return False, "No parameters have been provided."
         try:
-            parsed = {}
+            db.begin()
             for param in params.split(';'):
                 name, value = param.split('=')
                 name, value = name.strip().lower(), value.strip()
                 match name:
                     case "bg_color" | "full_bar_color" | "progress_bar_color" | "text_color":
-                        if value[0] == '#':
+                        if regex.hexa_hash.match(value):
                             color = int(f"0xFF{value[5:7]}{value[3:5]}{value[1:3]}", 16)
 
-                        elif value[:2] == "0x":
+                        elif regex.hexa_0x.match(value):
                             color = int(f"0xFF{value[6:8]}{value[4:6]}{value[2:4]}", 16)
 
                         elif len(channels := value.split(',')) == 3:
@@ -168,9 +168,12 @@ class Ranking(commands.Cog):
                             color = int(f"0xFF{hex(b)[2:]:0>2}{hex(g)[2:]:0>2}{hex(r)[2:]:0>2}", 16)
 
                         else:
+                            db.rollback()
                             return False, f"Unable to parse the value {value} assigned to {name}"    
        
-                        parsed[name] = color
+                        db.update(values=f"{name}={color}",
+                                  table="ranking",
+                                  condition=f"user_id={ctx.author.id}")
        
                     case "bg_image":
                         has_custom_bg = 1
@@ -189,23 +192,22 @@ class Ranking(commands.Cog):
                             improc.resize_and_save(img, img_path, (cfg.ranking.img_width, cfg.ranking.img_height))
                         
                         else:
+                            db.rollback()
                             return False, f"Unable to process the value {value} assigned to {name}."
                         
-                        parsed[name] = has_custom_bg
+                        db.update(values=f"{name}={has_custom_bg}",
+                                  table="ranking",
+                                  condition=f"user_id={ctx.author.id}")
 
                     case _:
+                        db.rollback()
                         return False, f"Parameter {name} doesn\'t exist."
-                    
-            db.update(values=f"{', '.join([f'{key}={val}' for key, val in parsed.items()])}",
-                      table="ranking",
-                      condition=f"user_id={ctx.author.id}")
-            db.commit()
-        
-        except Exception as e:
-            print(e.with_traceback())
+        except:
+            db.rollback()
             return False, f"An exception has been raised while parsing provided parameters. \
                 Please make sure that you\'ve used the correct syntax."
         
+        db.commit()
         return True, "ok"
 
 
