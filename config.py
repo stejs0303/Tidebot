@@ -37,8 +37,7 @@ class _Gear:
         self.img_y                      = gear["IMG_Y"]
         self.img_width                  = gear["IMG_WIDTH"]
         self.img_height                 = gear["IMG_HEIGHT"]
-        self.include                    = gear["INCLUDE_STATS"]
-        self.exclude                    = gear["EXCLUDE_STATS"]
+        self.name_mapping               = gear["STATS_MAPPING"]
         self.path                       = gear["IMG_FOLDER"]
 
 
@@ -63,17 +62,29 @@ class _Config:
         self.gear                   = _Gear(config["GEAR"])
         
         
+    def reload(self):
+        print("Reloading Config!")
+        config = self.get_config()
+        self.__init__(config)
+        
+        
     @classmethod
     def from_json(cls):
         print("Loading Config!")
-        
+        config = cls.get_config()
+
+        return cls(config)
+    
+    
+    @staticmethod    
+    def get_config():
         try:
             with open("data\\config.json", 'r') as cfg:
                 config = json.load(cfg)
         except Exception as e:
-            print(e); exit(1)
-            
-        return cls(config)
+            print(e); exit(1)  
+        
+        return config
 
 
 
