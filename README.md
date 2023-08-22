@@ -13,14 +13,13 @@ Used libraries can be found in `requirements.txt`.
   - [ ] comparing 2 or more users
 - [ ] Gear
   - [ ] commands for setting gear and individual stats in discord, 
-  - [ ] setting gear by scraping garmoth.com builds for useful data, 
+  - [x] setting gear by scraping garmoth.com builds for useful data, 
   - [ ] displaying saved gear  
 - [ ] Server
   - [ ] welcome message,
   - [ ] role assignment,
   - [ ] commands for guild quests or boss runs,
   - [ ] autofeed
-- [ ] Reformatting
 - [ ] Comments
 - [ ] Testing
 
