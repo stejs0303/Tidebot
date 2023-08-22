@@ -10,6 +10,7 @@ class _Regex:
         self.percentage         = re.compile(r"^\d+((\.|,)\d+)?\ ?%?$", flags=re.RegexFlag.MULTILINE)
         self.garmoth_url        = re.compile(r"^(https:\/\/|http:\/\/|www.)garmoth.com\/character\/[0-9a-zA-Z]{10}$", 
                                              flags=re.RegexFlag.MULTILINE)
+        self.emote              = re.compile(r"^<:[a-zA-Z0-9]+:\d+>$", flags=re.RegexFlag.MULTILINE)
 
 
 regex = _Regex()
