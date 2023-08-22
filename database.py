@@ -2,7 +2,6 @@ import sqlite3 as sql
 from typing import Any
 
 class Database:
-    """ TODO: Fix slots? """
     __slots__ = ("_connection", "_cursor")
     
     
@@ -25,8 +24,8 @@ class Database:
             print("Gear table doesn't exist! Initializing new table.")
             self._cursor.execute(""" CREATE TABLE gear(user_id INTEGER PRIMARY KEY, 
                                                        ap INTEGER, aap INTEGER, dp INTEGER, hp INTEGER, 
-                                                       all_ap INTEGER, all_aap INTEGER, acc INTEGER, 
-                                                       dr TEXT, dr_rate REAL, eva TEXT, se_rate REAL,
+                                                       total_ap INTEGER, total_aap INTEGER, accuracy INTEGER, 
+                                                       dr TEXT, dr_rate REAL, evasion TEXT, se_rate REAL,
                                                        class TEXT, level REAL, plan TEXT, gear INTEGER ) """)
         
         if not any("ranking" in table for table in res):
