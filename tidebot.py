@@ -6,8 +6,6 @@ import os
 from config import cfg
 from database import db
 
-from utils.messages import process_message
-
 
 _intents = discord.Intents().default()
 _intents.message_content = True
@@ -33,9 +31,7 @@ async def on_message(message: discord.Message):
     if message.content[0:len(cfg.prefix)] == cfg.prefix:
         await tidebot.process_commands(message)    
         return
-    
-    await process_message(message)
-    
+        
     print(f"(Tidebot) {message.author} said: '{message.content}' in {message.channel}")
 
 
@@ -67,9 +63,14 @@ async def help(ctx: commands.Context):
 @commands.is_owner()
 async def reload(ctx: commands.Context, module: str):
     async with ctx.channel.typing():
-        await tidebot.unload_extension(f"modules.{module}")
-        await tidebot.load_extension(f"modules.{module}")
-        await ctx.send(f"Module {module} has been reloaded.")
+        if module == "config":
+            cfg.reload()
+            await ctx.send("Config has been reloaded.")
+            
+        elif f"modules.{module}" in tidebot.extensions.keys():
+            await tidebot.unload_extension(f"modules.{module}")
+            await tidebot.load_extension(f"modules.{module}")
+            await ctx.send(f"Module {module} has been reloaded.")
 
 
 @tidebot.command(aliases=["close_connection"])
