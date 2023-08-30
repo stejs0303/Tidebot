@@ -2,8 +2,6 @@ from PIL import Image as _Image
 from PIL import ImageDraw as _ImageDraw
 from PIL.Image import Resampling as _Resampling
 
-from config import cfg as _cfg
-
 
 def round_corner(radius, fill):
     """Draw a round corner"""
@@ -26,5 +24,5 @@ def round_rectangle(size, radius, fill):
 
 
 def resize_and_save(img: _Image.Image, img_path: str, size: tuple):
-    img = img.thumbnail(size, _Resampling.BICUBIC)
+    img = img.resize(size, _Resampling.BICUBIC)
     img.save(img_path)
