@@ -1,5 +1,7 @@
 import discord
+from discord import User
 from discord.ext import commands
+from discord.ext.commands import Context
 
 import io
 import math
@@ -15,12 +17,12 @@ from config import cfg
 from database import db
 from compiled_regex import regex
 
+
 class Ranking(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         
-        """ TODO: f-string doesn't allow '\' fix?"""
-        self.rank_help = discord.Embed(title="Ranking help",
+        self.rank_help = discord.Embed(title="Ranking Help",
                                        colour=cfg.embed_color)
         self.rank_help.add_field(name=f"{cfg.prefix}rank / {cfg.prefix}rank @user",
                                  value="- generates rank summary for caller or mentioned user",
@@ -32,7 +34,8 @@ class Ranking(commands.Cog):
                                  f" - accepts Image, URL and None\n\n"
                                  f"bg_color, full_bar_color, progress_bar_color, text_color\n"
                                  f" - accept r, g, b values or hex code that begins with # or 0x```\n"
-                                 f"- to make change to multiple parameters, use a semicolon ' ; ' as a separator",
+                                 f"- to make change to multiple parameters, use a semicolon ' ; ' as a separator\n"
+                                 f"- keywords are not case sensitive",
                                  inline=False)
         self.rank_help.add_field(name=f"{cfg.prefix}rank reset",
                                  value="- resets your rank summary to default color scheme",
@@ -77,11 +80,11 @@ class Ranking(commands.Cog):
 
 
     @commands.group(pass_context=True, invoke_without_command=True)
-    async def rank(self, ctx: commands.Context, *args):
+    async def rank(self, ctx: Context, *args):
         async with ctx.channel.typing():
             user_id = utils.get_user(ctx, args)
             try:
-                user: discord.User = await self.bot.fetch_user(user_id)
+                user: User = await self.bot.fetch_user(user_id)
                 
                 if not db.contains(table="ranking", condition=f"user_id={user_id}"):
                     await ctx.send(f"Couldn't find '{user.name}' in my database.")
@@ -103,16 +106,23 @@ class Ranking(commands.Cog):
 
             except Exception as e:
                 print(e)
+
+
+    # TODO: IMPLEMENT
+    @rank.command()
+    async def compare(self, ctx: Context, *args):
+        async with ctx.channel.typing():
+            ...
                 
 
     @rank.command()
-    async def help(self, ctx: commands.Context):
+    async def help(self, ctx: Context):
         async with ctx.channel.typing():
             await ctx.send(embed=self.rank_help)
 
 
     @rank.command()
-    async def set(self, ctx: commands.Context, *, params: str = None):
+    async def set(self, ctx: Context, *, params: str = None):
         async with ctx.channel.typing():
             state, message = await self.process_settings(ctx, params)
             if state:
@@ -122,12 +132,12 @@ class Ranking(commands.Cog):
 
 
     @rank.command()
-    async def reset(self, ctx: commands.Context, *args):
+    async def reset(self, ctx: Context, *args):
         async with ctx.channel.typing():
             user_id = utils.get_user(ctx, args)
             try:
                 if not db.contains(table="ranking", condition=f"user_id={user_id}"):
-                    user: discord.User = await self.bot.fetch_user(user_id)
+                    user: User = await self.bot.fetch_user(user_id)
                     await ctx.send(f"Couldn't find '{user.name}' in my database.")
                     return
                 
@@ -147,7 +157,7 @@ class Ranking(commands.Cog):
                 print(e)
     
 
-    async def process_settings(self, ctx: commands.Context, params: str) -> bool:
+    async def process_settings(self, ctx: Context, params: str) -> bool:
         if params is None: 
             return False, "No parameters have been provided."
         try:
@@ -232,7 +242,7 @@ class Ranking(commands.Cog):
             print(e)
             
 
-    async def generate_image(self, user: discord.User, exp: int, level: int, 
+    async def generate_image(self, user: User, exp: int, level: int, 
                              bg_color: int, full_bar_color: int, progress_bar_color: int, 
                              text_color: int, bg_image: int) -> Image.Image:
         image = None
@@ -279,6 +289,8 @@ class Ranking(commands.Cog):
         return out
 
 
+    async def generate_comparison(users: list) -> Image.Image:
+        pass
 
 async def setup(client):
     await client.add_cog(Ranking(client))
