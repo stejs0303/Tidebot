@@ -1,5 +1,7 @@
-from discord.ext import commands as _commands
 import discord as _discord
+from discord import Attachment as _Attachment
+from discord.ext import commands as _commands
+from discord.ext.commands import Context as _Context
 
 from PIL import Image as _Image
 
@@ -9,11 +11,11 @@ import re as _re
 import io as _io
 import os as _os
 
-def get_user(ctx: _commands.Context, args) -> str:
+def get_user(ctx: _Context, args) -> str:
     return str(ctx.author.id) if not bool(args) else _re.search("\d+", args[0]).group()
 
 
-async def get_image_from_attachment(file: _discord.Attachment) -> None:
+async def get_image_from_attachment(file: _Attachment) -> None:
     return _Image.open(_io.BytesIO(await file.read()))
 
     
