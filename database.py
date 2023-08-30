@@ -18,7 +18,8 @@ class Database:
     
     
     def validate_databases(self) -> None:
-        res = self._cursor.execute("SELECT name FROM sqlite_master")
+        self._cursor.execute("SELECT name FROM sqlite_master")
+        res = self._cursor.fetchall()
         
         if not any("gear" in table for table in res):
             print("Gear table doesn't exist! Initializing new table.")
@@ -26,13 +27,13 @@ class Database:
                                                        ap INTEGER, aap INTEGER, dp INTEGER, hp INTEGER, 
                                                        total_ap INTEGER, total_aap INTEGER, accuracy INTEGER, 
                                                        dr TEXT, dr_rate REAL, evasion TEXT, se_rate REAL,
-                                                       class TEXT, level REAL, plan TEXT, gear INTEGER ) """)
+                                                       class TEXT, level TEXT, plan TEXT, img INTEGER) """)
         
         if not any("ranking" in table for table in res):
             print("Ranking table doesn't exist! Initializing new table.")
             self._cursor.execute(""" CREATE TABLE ranking(user_id INTEGER PRIMARY KEY, exp INTEGER, level INTEGER, 
                                                           bg_color INTEGER, full_bar_color INTEGER, progress_bar_color INTEGER,
-                                                          text_color INTEGER, bg_image INTEGER ) """)
+                                                          text_color INTEGER, bg_image INTEGER) """)
     
     
     def select(self, values: str, table: str, condition: str = "") -> None:
@@ -80,6 +81,10 @@ class Database:
         self._connection.rollback()
 
 
+    def delete_table(self, table: str) -> None:
+        self._cursor.execute(f"DROP TABLE {table}")
+    
+    
     def close(self) -> None:
         print("Closing database connection!")
 
