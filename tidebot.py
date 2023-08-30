@@ -1,5 +1,7 @@
-from discord.ext import commands
 import discord
+from discord import TextChannel, Message, DiscordException
+from discord.ext import commands
+from discord.ext.commands import Context
 import asyncio
 import os
 
@@ -20,11 +22,13 @@ tidebot = commands.Bot(command_prefix=cfg.prefix,
 
 @tidebot.event
 async def on_ready():
+    channel: TextChannel = tidebot.get_channel(cfg.testing_channel)
     print(f"{tidebot.user} is now running.")
+    await channel.send(f"{tidebot.user} is now running.")
         
         
 @tidebot.event
-async def on_message(message: discord.Message):
+async def on_message(message: Message):
     if message.author == tidebot.user:
         return
     
@@ -36,7 +40,7 @@ async def on_message(message: discord.Message):
 
 
 @tidebot.command()
-async def help(ctx: commands.Context):
+async def help(ctx: Context):
     async with ctx.channel.typing():
         embed = discord.Embed(title="Tidebot help", 
                               colour=cfg.embed_color, 
@@ -61,7 +65,7 @@ async def help(ctx: commands.Context):
 
 @tidebot.command()
 @commands.is_owner()
-async def reload(ctx: commands.Context, module: str):
+async def reload(ctx: Context, module: str):
     async with ctx.channel.typing():
         if module == "config":
             cfg.reload()
@@ -75,7 +79,7 @@ async def reload(ctx: commands.Context, module: str):
 
 @tidebot.command(aliases=["close_connection"])
 @commands.is_owner()
-async def bot_stop(ctx: commands.Context, *args):
+async def bot_stop(ctx: Context, *args):
     
     message:str = f"{tidebot.user} going dark."
     try:
@@ -89,13 +93,13 @@ async def bot_stop(ctx: commands.Context, *args):
     
 
 @tidebot.event
-async def on_command_error(message: discord.Message, error: discord.DiscordException):
-    match error:
-        case commands.CommandNotFound:
+async def on_command_error(message: Message, error: DiscordException):
+    match type(error):
+        case discord.ext.commands.errors.CommandNotFound:
             await message.reply("Sorry, I can't seem to find this command.")
-        case commands.NotOwner:
+        case discord.ext.commands.errors.NotOwner:
             await message.reply("You do not have permission to use this command.")
-        case commands.MissingRequiredArgument:
+        case discord.ext.commands.errors.MissingRequiredArgument:
             await message.reply("Please pass in all required arguments.")
         case _:
             await message.channel.send("Something went wrong, but... <:shrug:729752332589465740>")
@@ -104,14 +108,12 @@ async def on_command_error(message: discord.Message, error: discord.DiscordExcep
 
 @tidebot.event
 async def on_error(event, *args, **kwargs):
-    print(type(event))
-    print(event)
-    message: discord.Message = args[0]
+    message: Message = args[0]
     await message.reply("You've caused an error!<:reee:778565765355405392>")
 
     
 @tidebot.command()
-async def github(ctx: commands.Context, *args):
+async def github(ctx: Context, *args):
     await ctx.send("https://github.com/stejs0303/Tidebot")
     
 
